@@ -1,9 +1,10 @@
+//edited by J.Ekrami 2024-10-18
 import { Readability } from "jsr:@paoramen/cheer-reader";
 
 import ollama from "npm:ollama";
 import * as cheerio from "npm:cheerio@1.0.0";
 
-const searchUrl = Deno.env.get("SEARCH_URL");
+const searchUrl = "http://localhost:8181/search";
 const query = Deno.args.join(" ");
 
 console.log(`Query: ${query}`);
@@ -11,13 +12,14 @@ const urls = await getNewsUrls(query);
 const alltexts = await getCleanedText(urls);
 await answerQuery(query, alltexts);
 
-async function getNewsUrls(query: string) {
-	const searchResults = await fetch(`${searchUrl}?q=${query}&format=json`);
+async function getNewsUrls(query: string): Promise<string[]> {
+
+	const searchResults = await fetch(`${searchUrl}?q=${encodeURIComponent(query)}&format=json`);
 	const searchResultsJson: { results: Array<{ url: string }> } =
 		await searchResults.json();
 	const urls = searchResultsJson.results
 		.map((result) => result.url)
-		.slice(0, 1);
+		.slice(0, 5); // Change the slice value to return more URLs if needed
 	return urls;
 }
 
@@ -34,28 +36,8 @@ async function getCleanedText(urls: string[]) {
 }
 
 function htmlToText(html: string) {
-	const $ = cheerio.load(html);
-
-  // Thanks to the comment on the YouTube video from @eliaspereirah for suggesting 
-  // using Mozilla Readability. I used a variant that made it easier to use with 
-  // cheerio. Definitely simplifies things
-		const text = new Readability($).parse();
-
-  // What I had before
-
-	// $("script, source, style, head, img, svg, a, form, link, iframe").remove();
-	// $("*").removeClass();
-	// $("*").each((_, el) => {
-	// 	if (el.type === "tag" || el.type === "script" || el.type === "style") {
-	// 		for (const attr of Object.keys(el.attribs || {})) {
-	// 			if (attr.startsWith("data-")) {
-	// 				$(el).removeAttr(attr);
-	// 			}
-	// 		}
-	// 	}
-	// });
-	// const text = $("body").text().replace(/\s+/g, " ");
-
+	const $ = cheerio.load(html); //cheerio is wonderfull!
+  	const text = new Readability($).parse();
 	return text.textContent;
 }
 
